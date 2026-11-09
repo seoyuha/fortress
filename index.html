@@ -277,6 +277,19 @@ button{font-family:'Jua','Noto Sans KR',sans-serif;cursor:pointer;border:none;ou
 .roomBadge{position:absolute;background:rgba(10,30,70,.78);border:3px solid #ffd84d;border-radius:14px;color:#fff;font-family:'Jua','Noto Sans KR',sans-serif;font-size:30px;display:flex;align-items:center;justify-content:center;gap:8px}
 .roomBadge b{color:#ffd84d;font-size:36px;letter-spacing:4px}
 #qwrap{z-index:45}
+
+/* v9 교사 확인 */
+#pwWrap{position:absolute;inset:0;z-index:80;background:rgba(8,20,40,.6);display:none;align-items:center;justify-content:center}
+#pwWrap.on{display:flex}
+#pwBox{width:400px;background:#fff;border:4px solid #1b5fc4;border-radius:22px;padding:28px;display:flex;flex-direction:column;gap:14px;font-family:'Jua','Noto Sans KR',sans-serif;text-align:center}
+#pwTtl{font-size:30px;color:#14213f}
+#pwIn{font-family:inherit;font-size:26px;text-align:center;padding:10px;border:3px solid #cbd6ea;border-radius:12px;outline:none}
+#pwIn:focus{border-color:#1b5fc4}
+#pwMsg{font-size:18px;color:#d6342c;min-height:22px}
+#pwRow{display:flex;gap:12px;justify-content:center}
+#pwRow button{font-family:inherit;font-size:22px;padding:10px 26px;border:0;border-radius:12px;cursor:pointer}
+#pwOk{background:#1b5fc4;color:#fff}
+#pwNo{background:#e7e9ef;color:#444}
 </style>
 </head>
 <body>
@@ -2547,6 +2560,31 @@ function renderRemoteResult(){const v=RM.data,r=v.result||{},me=setup.humans[tcI
   // 매 프레임 차례 정보 보내기 (+ 화면이 가려져 있어도 1초마다 보험 전송)
   const _upd=update;update=function(){_upd();if(RM.role==='host')hostTurnPublish()};
   setInterval(()=>{if(RM.role==='host'&&game&&$('battle').classList.contains('on'))hostTurnPublish()},900);
+})();
+
+</script>
+<script>
+
+/* =========================================================
+   v9 — 교사 비밀번호 (모둠 대전 · 교사 설정 보호)
+   ========================================================= */
+const TPW='finel9932!';
+function isTeacher(){try{return localStorage.getItem('ef_tauth')==='1'}catch(e){return false}}
+function teacherGate(fn){if(isTeacher())return fn();
+  let w=document.getElementById('pwWrap');
+  if(!w){w=document.createElement('div');w.id='pwWrap';
+    w.innerHTML='<div id="pwBox"><div id="pwTtl">\uD83D\uDD12 \uAD50\uC0AC \uD655\uC778</div><input id="pwIn" type="password" placeholder="\uBE44\uBC00\uBC88\uD638" autocomplete="off"><div id="pwMsg"></div><div id="pwRow"><button id="pwOk">\uD655\uC778</button><button id="pwNo">\uCDE8\uC18C</button></div></div>';
+    $('stage').appendChild(w);
+    $('pwOk').onclick=()=>{if($('pwIn').value===TPW){try{localStorage.setItem('ef_tauth','1')}catch(e){}w.classList.remove('on');snd('good');const f=teacherGate.fn;teacherGate.fn=null;if(f)f()}
+      else{$('pwMsg').textContent='\uBE44\uBC00\uBC88\uD638\uAC00 \uB2EC\uB77C\uC694';$('pwIn').value='';$('pwIn').focus();snd('bad')}};
+    $('pwNo').onclick=()=>{w.classList.remove('on');teacherGate.fn=null};
+    $('pwIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('pwOk').click()});
+    w.addEventListener('pointerdown',e=>{if(e.target===w)$('pwNo').click()})}
+  teacherGate.fn=fn;$('pwMsg').textContent='';$('pwIn').value='';w.classList.add('on');setTimeout(()=>{try{$('pwIn').focus()}catch(e){}},60)}
+(function(){
+  const _sr2=startRoom;startRoom=function(m){if(m==='versus'&&RM.role!=='client'&&!isTeacher()){teacherGate(()=>_sr2(m));return}_sr2(m)};
+  const _os=openSettingsScr;openSettingsScr=function(){if(!isTeacher()){teacherGate(()=>_os());return}_os()};
+  const _rs=renderSet;renderSet=function(){_rs();if(RM.role==='host'&&RM.code)$('setMk').insertAdjacentHTML('beforeend',`<div class="roomBadge" style="${P(1170,20,330,52)}">\uBC29 \uBC88\uD638 <b>${RM.code}</b></div>`)};
 })();
 
 </script>
