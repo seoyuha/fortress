@@ -1330,13 +1330,8 @@ function startBattle(){
   genMap(map);game.bgPending=false;drawScene(map);
   const list=setup.names.map((n,i)=>({name:n,tank:picks[i],ai:false,team:team?setup.teamOf[i]:i}));
   if(setup.mode==='practice'){list[0].team=0;list.push({name:'AI 전차',tank:pick(['rock','bolt','boomer','trion']),ai:true,team:1})}
-  const xs=spawnPoints(list.length).sort((a,b)=>a-b);const IKEYS=Object.keys(ITEMS);
-  const byTeam={};list.forEach(p=>{(byTeam[p.team]=byTeam[p.team]||[]).push(p)});
-  const tks=shuffle(Object.keys(byTeam));tks.forEach(k=>shuffle(byTeam[k]));
-  const order=[];let gi=Math.floor(Math.random()*tks.length),guard=0;
-  while(order.length<list.length&&guard++<999){const tk=tks[gi%tks.length];gi++;
-    if(byTeam[tk].length)order.push(byTeam[tk].shift())}
-  tks.forEach(k=>{while(byTeam[k].length)order.push(byTeam[k].shift())});
+  const xs=shuffle(spawnPoints(list.length));const IKEYS=Object.keys(ITEMS);
+  const order=shuffle(list.slice());
   order.forEach((p,i)=>{const x=xs[i];
     game.players.push({pid:p.pid||null,name:p.name,tankId:p.tank,ai:p.ai,team:p.team,x,y:-60-Math.random()*520,vy:0,drop:true,hp:100,face:1,ang:45,pow:60,fuel:0,alive:true,shield:false,mark:0,markBy:null,lastSpecial:false,heals:2,noMove:false,items:(p.ai||S.items===false)?[]:[pick(IKEYS),pick(IKEYS)],fall:false,
      mood:'normal',moodT:0,st:{first:0,retry:0,wrongs:[],earned:0,dmg:0},rewarded:new Set()})});
@@ -1900,13 +1895,8 @@ function startBattle(){
     phase:'drop',useSpecial:false,canSpecial:false,timer:0,hold:null,t:0,flyWait:0,ai:setup.ai||'normal',grav:GRAV*(map.grav||1),itemUsed:false,mods:{},teleUsed:false,mapName:map.name};
   genMap(map);game.bgPending=false;drawScene(map);
   const list=rosterFull();
-  const xs=spawnPoints(list.length).sort((a,b)=>a-b);const IKEYS=Object.keys(ITEMS);
-  const byTeam={};list.forEach(p=>{(byTeam[p.team]=byTeam[p.team]||[]).push(p)});
-  const tks=shuffle(Object.keys(byTeam));tks.forEach(k=>shuffle(byTeam[k]));
-  const order=[];let gi=Math.floor(Math.random()*tks.length),guard=0;
-  while(order.length<list.length&&guard++<999){const tk=tks[gi%tks.length];gi++;
-    if(byTeam[tk].length)order.push(byTeam[tk].shift())}
-  tks.forEach(k=>{while(byTeam[k].length)order.push(byTeam[k].shift())});
+  const xs=shuffle(spawnPoints(list.length));const IKEYS=Object.keys(ITEMS);
+  const order=shuffle(list.slice());
   order.forEach((p,i)=>{const x=xs[i];
     game.players.push({pid:p.pid||null,name:p.name,tankId:p.tank,ai:p.ai,team:p.team,x,y:-60-Math.random()*520,vy:0,drop:true,hp:100,face:1,ang:45,pow:60,fuel:0,alive:true,shield:false,mark:0,markBy:null,lastSpecial:false,heals:2,noMove:false,items:(p.ai||S.items===false)?[]:[pick(IKEYS),pick(IKEYS)],fall:false,
      mood:'normal',moodT:0,st:{first:0,retry:0,wrongs:[],earned:0,dmg:0},rewarded:new Set()})});
@@ -2262,13 +2252,8 @@ function startBattle(){
     const ca=r.filter(p=>p.team===mt[0]).length,cb=r.filter(p=>p.team===mt[1]).length;
     if(ca!==cb)r.push({name:'AI 탱크',tank:setup.aiTank||(setup.aiTank=pick(['rock','bolt','boomer','trion'])),ai:true,team:ca<cb?mt[0]:mt[1],ready:true,idx:-1});
     return r})();
-  const xs=spawnPoints(list.length).sort((a,b)=>a-b);const IKEYS=Object.keys(ITEMS);
-  const byTeam={};list.forEach(p=>{(byTeam[p.team]=byTeam[p.team]||[]).push(p)});
-  const tks=shuffle(Object.keys(byTeam));tks.forEach(k=>shuffle(byTeam[k]));
-  const order=[];let gi=Math.floor(Math.random()*tks.length),guard=0;
-  while(order.length<list.length&&guard++<999){const tk=tks[gi%tks.length];gi++;
-    if(byTeam[tk].length)order.push(byTeam[tk].shift())}
-  tks.forEach(k=>{while(byTeam[k].length)order.push(byTeam[k].shift())});
+  const xs=shuffle(spawnPoints(list.length));const IKEYS=Object.keys(ITEMS);
+  const order=shuffle(list.slice());
   order.forEach((p,i)=>{const x=xs[i];
     game.players.push({pid:p.pid||null,name:p.name,tankId:p.tank,ai:p.ai,team:p.team,x,y:-60-Math.random()*520,vy:0,drop:true,hp:100,face:1,ang:45,pow:60,fuel:0,alive:true,shield:false,mark:0,markBy:null,lastSpecial:false,heals:2,noMove:false,items:(p.ai||S.items===false)?[]:[pick(IKEYS),pick(IKEYS)],fall:false,
      mood:'normal',moodT:0,st:{first:0,retry:0,wrongs:[],earned:0,dmg:0},rewarded:new Set()})});
