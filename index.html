@@ -2490,6 +2490,7 @@ function renderRemoteResult(){const v=RM.data,r=v.result||{},me=setup.humans[tcI
   // 제목 화면: 방 참가 버튼
   const _title=titleAnim;titleAnim=function(){_title();
     $('tMenu').insertAdjacentHTML('beforeend',`<div style="position:absolute;left:22px;top:16px"><button class="pbtn" style="--n:url(${iURI('tab_on')});--p:url(${iURI('tab_on')});width:208px;height:52px;position:relative" onclick="openJoin()"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Jua','Noto Sans KR',sans-serif;font-size:24px;color:#fff;text-shadow:0 2px 0 #0b2a6a">방 참가 (학생)</span></button></div>`)};
+  if($('title').classList.contains('on'))titleAnim();
   // 모둠 대전 → 수업방 열기
   const _startRoom=startRoom;startRoom=async function(mode){
     if(mode==='versus'&&RM.role!=='client'){await hostOpen()}
