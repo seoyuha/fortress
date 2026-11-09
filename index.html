@@ -291,6 +291,8 @@ button{font-family:'Jua','Noto Sans KR',sans-serif;cursor:pointer;border:none;ou
 #pwOk{background:#1b5fc4;color:#fff}
 #pwNo{background:#e7e9ef;color:#444}
 .roomBadge.bad{background:#7a1420;border-color:#ff9d9d;cursor:pointer;font-size:26px}
+.tlink{background:rgba(10,30,70,.55);border:2px solid rgba(255,255,255,.5);border-radius:12px;color:#dfeaff;font-family:'Jua','Noto Sans KR',sans-serif;font-size:22px;cursor:pointer}
+.tlink:active{background:rgba(10,30,70,.8)}
 
 /* v10 두 팀 대결 선택 */
 #mpWrap{position:absolute;inset:0;z-index:78;background:rgba(8,20,40,.6);display:none;align-items:center;justify-content:center}
@@ -2426,6 +2428,7 @@ function openJoin(){const m=/[?&]room=(\d{4})/.exec(location.search);let nm='';t
   h+=SPR('pill_cnt',470,410,732,140)+`<input id="jCode" inputmode="numeric" maxlength="4" placeholder="방 번호 4자리" value="${m?m[1]:''}" class="jin" style="${P(560,432,552,96)}font-size:58px;color:#fff">`;
   h+=SPR('bar_lb',400,580,872,112)+`<input id="jName" maxlength="8" placeholder="내 이름" value="${esc(nm)}" class="jin" style="${P(470,594,732,84)}font-size:50px;color:#14213f">`;
   h+=`<button class="sbtn" style="${P(596,736,480,104)}--n:url(${iURI('tab_on')});--p:url(${iURI('tab_on')})" onclick="doJoin()"></button><div class="mtx" style="left:836px;top:790px;font-size:48px;color:#fff;text-shadow:0 3px 0 #0b2a6a">참가하기</div>`;
+  h+=`<button class="tlink" style="position:absolute;left:1180px;top:860px;width:380px;height:56px" onclick="teacherRoom()">선생님이신가요? 수업방 열기 🔒</button>`;
   $('join').style.backgroundImage=`url(${iURI('bg_tc2')})`;$('joinMk').innerHTML=h;show('join')}
 async function doJoin(){const code=($('jCode').value||'').trim(),name=($('jName').value||'').trim().slice(0,8);
   if(!/^\d{4}$/.test(code)){toast('방 번호 4자리를 넣어 주세요');return}
@@ -2628,7 +2631,8 @@ function teacherGate(fn){if(isTeacher())return fn();
     w.addEventListener('pointerdown',e=>{if(e.target===w)$('pwNo').click()})}
   teacherGate.fn=fn;$('pwMsg').textContent='';$('pwIn').value='';w.classList.add('on');setTimeout(()=>{try{$('pwIn').focus()}catch(e){}},60)}
 (function(){
-  const _sr2=startRoom;startRoom=function(m){if(m==='versus'&&RM.role!=='client'&&!isTeacher()){teacherGate(()=>_sr2(m));return}_sr2(m)};
+  const _sr2=startRoom;startRoom=function(m){if(m==='versus'&&RM.role!=='client'&&!isTeacher()){openJoin();return}_sr2(m)};
+  window.teacherRoom=function(){teacherGate(()=>_sr2('versus'))};
   const _os=openSettingsScr;openSettingsScr=function(){if(!isTeacher()){teacherGate(()=>_os());return}_os()};
   const _rs=renderSet;renderSet=function(){_rs();if(RM.role==='host'&&RM.code)$('setMk').insertAdjacentHTML('beforeend',`<div class="roomBadge" style="${P(1170,20,330,52)}">\uBC29 \uBC88\uD638 <b>${RM.code}</b></div>`)};
 })();
