@@ -309,6 +309,18 @@ button{font-family:'Jua','Noto Sans KR',sans-serif;cursor:pointer;border:none;ou
 #mpGo{background:#e8711a;color:#fff}
 #mpGo:disabled{background:#cfd4de;cursor:default}
 #mpNo{background:#e7e9ef;color:#444}
+
+/* v11 동시 대전 */
+#dual{background:#0c1430}
+.dtop{position:absolute;left:0;top:0;width:1280px;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;box-sizing:border-box;color:#fff;font-family:'Jua','Noto Sans KR',sans-serif;font-size:22px}
+.dtop b{color:#ffd84d;font-size:27px;letter-spacing:3px}
+.dhalf{position:absolute;left:0;width:1280px;height:337px}
+.dlab{position:absolute;left:24px;top:110px;width:230px;display:flex;flex-direction:column;gap:8px;font-family:'Jua','Noto Sans KR',sans-serif;font-size:26px;color:#fff;text-align:center}
+.dlab i{font-style:normal;color:#9fb4e8;font-size:19px}
+.dbox{position:absolute;left:300px;top:0;width:600px;height:337px;overflow:hidden;border:2px solid #2c3e6e;border-radius:10px;background:#000}
+.dbox iframe{width:1280px;height:720px;border:0;transform:scale(0.4683);transform-origin:0 0}
+.dnote{position:absolute;right:24px;top:140px;width:320px;font-family:'Noto Sans KR',sans-serif;font-size:17px;color:#8ea2d8;line-height:1.5}
+#mpDual{font-family:inherit;font-size:24px;padding:12px 24px;border:0;border-radius:12px;cursor:pointer;background:#1f9a3a;color:#fff}
 </style>
 </head>
 <body>
@@ -372,6 +384,7 @@ button{font-family:'Jua','Noto Sans KR',sans-serif;cursor:pointer;border:none;ou
 <!-- ============ 교사 설정 ============ -->
 <div id="setScr" class="bgscr"><div class="mk" id="setMk"></div></div>
 <!-- ============ 수업방 참가(학생 기기) ============ -->
+<div class="screen" id="dual"></div>
 <div class="screen bgscr" id="join"><div class="mk" id="joinMk"></div></div>
 <div class="screen bgscr" id="remote"><div class="mk" id="remoteMk"></div></div>
   <div id="qwrap" style="z-index:45"><div id="qbox">
@@ -2359,7 +2372,7 @@ function hostMerge(){const P=(RM.data&&RM.data.players)||{};if(setup.mode!=='ver
   const before=JSON.stringify(setup.humans.map(h=>[h.pid,h.name,h.tank,h.ready,h.team]));
   setup.humans=setup.humans.filter(h=>!h.pid||P[h.pid]);
   for(const pid in P){const q=P[pid];if(!q||!q.name)continue;let h=setup.humans.find(x=>x.pid===pid);
-    if(!h){const hum=[...Array(setup.teamN).keys()].map(t=>humansIn(t).length);let t=0;for(let k=0;k<setup.teamN;k++)if(hum[k]<hum[t])t=k;
+    if(!h){if(RM.sub)continue;const hum=[...Array(setup.teamN).keys()].map(t=>humansIn(t).length);let t=0;for(let k=0;k<setup.teamN;k++)if(hum[k]<hum[t])t=k;
       if(setup.humans.length>=MAXS){continue}
       h={pid,name:q.name,tank:q.tank||'rock',ready:false,team:t};setup.humans.push(h);snd('tick')}
     let nm=String(q.name).slice(0,8);if(setup.humans.some(x=>x!==h&&x.name===nm)){nm=nm.slice(0,6)+' '+(setup.humans.indexOf(h)+1);DB.update(RP('players/'+pid),{name:nm})}
@@ -2370,14 +2383,14 @@ function hostSync(v){if(RM.role!=='host')return;RM.data=v||{};
   if(changed){if($('assign').classList.contains('on'))renderAssign();else if($('ready').classList.contains('on'))renderReady()}
   hostPublish();
   if(game&&$('battle').classList.contains('on'))hostCtl()}
-function hostState(st){if(RM.role!=='host')return;DB.update(RP('meta'),{state:st,teamN:setup.teamN,units:S.units,aiTank:setup.aiTank||null});if(st==='lobby'||st==='assigned')hostPublish(true)}
-function hostPublish(force){if(RM.role!=='host'||!RM.data)return;clearTimeout(hostPublish.t);
+function hostState(st){if(RM.role!=='host'||RM.sub)return;const o={state:st,teamN:setup.teamN,units:S.units,aiTank:setup.aiTank||null};if(st!=='battle'){o.dual=null;RM.dual=false}DB.update(RP('meta'),o);if(st==='lobby'||st==='assigned')hostPublish(true)}
+function hostPublish(force){if(RM.role!=='host'||!RM.data||(RM.dual&&!RM.sub))return;clearTimeout(hostPublish.t);
   hostPublish.t=setTimeout(()=>{const P=(RM.data&&RM.data.players)||{},up={};
-    setup.humans.forEach(h=>{if(h.pid&&P[h.pid]){const q=P[h.pid];const want={team:h.team,pts:pts(h.name)};
+    setup.humans.forEach(h=>{if(RM.sub&&(!setup.matchTeams||!setup.matchTeams.includes(h.team)))return;if(h.pid&&P[h.pid]){const q=P[h.pid];const want={team:h.team,pts:pts(h.name)};
       if(q.team!==want.team)up[`players/${h.pid}/team`]=want.team;if(q.pts!==want.pts)up[`players/${h.pid}/pts`]=want.pts;
       if(!!q.ready!==!!h.ready&&h.readySet){up[`players/${h.pid}/ready`]=!!h.ready;delete h.readySet}}});
-    const m=RM.data.meta||{};if(m.teamN!==setup.teamN)up['meta/teamN']=setup.teamN;
-    if((m.aiTank||null)!==(setup.aiTank||null))up['meta/aiTank']=setup.aiTank||null;
+    const m=RM.data.meta||{};if(!RM.sub){if(m.teamN!==setup.teamN)up['meta/teamN']=setup.teamN;
+    if((m.aiTank||null)!==(setup.aiTank||null))up['meta/aiTank']=setup.aiTank||null;}
     if(Object.keys(up).length)DB.update(RP(),up)},force?0:120)}
 /* 배정이 바뀌면 다시 준비하도록 */
 function hostClearReady(){setup.humans.forEach(h=>{if(h.pid&&h.ready){h.ready=false;h.readySet=true}})}
@@ -2412,10 +2425,11 @@ function hostTurnPublish(){if(RM.role!=='host'||!game||!DB)return;const cp=cur()
     hp:Object.fromEntries(game.players.filter(p=>p.pid).map(p=>[p.pid,[Math.max(0,Math.round(p.hp)),p.alive?1:0]]))};
   const j=JSON.stringify(o);if(j===RM.turnKey)return;const now=performance.now();
   if(now-RM.turnT<110){clearTimeout(RM.turnTimer);RM.turnTimer=setTimeout(hostTurnPublish,120);return}
-  RM.turnKey=j;RM.turnT=now;DB.set(RP('turn'),o)}
+  RM.turnKey=j;RM.turnT=now;DB.set(RP(RM.sub?`matches/${RM.sub}/turn`:'turn'),o)}
 function hostResult(wt){if(RM.role!=='host')return;
   const r={winner:wt,teamN:game.nTeams,teams:game.matchTeams||null,players:Object.fromEntries(game.players.filter(p=>p.pid).map(p=>[p.pid,{team:p.team,first:p.st.first,retry:p.st.retry,earned:p.st.earned,pts:pts(p.name)}]))};
-  const up={result:r,'meta/state':'result'};game.players.forEach(p=>{if(p.pid)up[`players/${p.pid}/pts`]=pts(p.name)});
+  const up={};if(RM.sub)up[`matches/${RM.sub}/result`]=r;else{up.result=r;up['meta/state']='result'}
+  game.players.forEach(p=>{if(p.pid)up[`players/${p.pid}/pts`]=pts(p.name)});
   DB.update(RP(),up)}
 
 /* =========================================================
@@ -2453,11 +2467,17 @@ function clientMirror(v){const P=v.players||{},m=v.meta||{};setup.mode='versus';
 function clientSync(v){if(RM.role!=='client')return;RM.data=v;
   if(!v||!v.meta||v.meta.state==='closed'){toast('수업방이 닫혔어요');if(RM.off)RM.off();RM.role=null;show('title');return}
   if(!v.players||!v.players[RM.pid]){toast('선생님이 수업방에서 내보냈어요');if(RM.off)RM.off();RM.role=null;show('title');return}
-  const vk=JSON.stringify([v.meta,v.players,v.turn||0,v.result||0]);
+  const vk=JSON.stringify([v.meta,v.players,v.turn||0,v.result||0,v.matches||0]);
   if(vk===RM.viewKey)return; RM.viewKey=vk;
   clientMirror(v);const st=v.meta.state;
+  const dual=v.meta.dual;
+  if(dual){const me0=setup.humans[tcIdx];let myM=null;
+    for(const k in dual)if(me0&&((dual[k]||{}).teams||[]).includes(me0.team))myM=k;
+    const M=myM?(((v.matches||{})[myM])||{}):{};
+    v=RM.data=Object.assign({},v,{turn:M.turn||null,result:M.result||null});}
   const t=v.turn||{};if(RM.waitAns&&(t.phase!=='ready'||t.pid!==RM.pid))RM.waitAns=false;
-  if(st==='battle'){if(!game||!game.cl)game={cl:1,units:v.meta.units||[10,11,12],players:[],phase:'remote',turn:0};
+  if(st==='battle'&&dual&&v.result){RM.qOpen=false;RM.waitAns=false;$('qwrap').classList.remove('on');renderRemoteResult()}
+  else if(st==='battle'){if(!game||!game.cl)game={cl:1,units:v.meta.units||[10,11,12],players:[],phase:'remote',turn:0};
     game.units=v.meta.units||game.units;if(!RM.qOpen)renderRemote()}
   else if(st==='result'){RM.qOpen=false;RM.waitAns=false;$('qwrap').classList.remove('on');renderRemoteResult()}
   else{RM.qOpen=false;RM.waitAns=false;$('qwrap').classList.remove('on');
@@ -2673,6 +2693,59 @@ async function retryRoom(){if(RM.role==='host')return;toast('수업방을 다시
   const _om=openMap;openMap=function(){
   if(setup.mode==='versus'&&setup.teamN>2){openMatchPick(()=>_om());return}
   setup.matchTeams=null;_om()};
+})();
+
+</script>
+<script>
+
+/* =========================================================
+   v11 — 4팀 동시 대전 (두 경기, 위·아래 2분할)
+   ========================================================= */
+const SUBP=(function(){if(!/[?&]sub=1/.test(location.search))return null;
+  const m=(/[?&]m=(m[01])/.exec(location.search)||[])[1],room=(/[?&]room=(\d{4})/.exec(location.search)||[])[1];
+  return m&&room?{m,room}:null})();
+async function subBoot(){
+  if(!await netInit())return;
+  RM.role='host';RM.sub=SUBP.m;RM.code=SUBP.room;RM.last={};
+  const room=await DB.get(RP());
+  if(!room||!room.meta||!room.meta.dual||!room.meta.dual[SUBP.m])return;
+  const d=room.meta.dual[SUBP.m],P=room.players||{};
+  setup.mode='versus';setup.teamN=room.meta.teamN||4;setup.aiTank=room.meta.aiTank||null;
+  setup.humans=Object.entries(P).filter(([k,q])=>q&&q.name).sort((a,b)=>(a[1].joined||0)-(b[1].joined||0)).map(([pid,q])=>({pid,name:q.name,tank:q.tank||'rock',ready:true,team:q.team||0}));
+  setup.humans.forEach(h=>{const q=P[h.pid];if(q&&q.pts!=null)SCORES[h.name]=q.pts});
+  const myNames=setup.humans.filter(h=>d.teams.includes(h.team)).map(h=>h.name);
+  saveScores=function(){try{const cur=JSON.parse(localStorage.getItem('ef_scores')||'{}');myNames.forEach(n=>{if(SCORES[n]!=null)cur[n]=SCORES[n]});localStorage.setItem('ef_scores',JSON.stringify(cur))}catch(e){}};
+  setup.matchTeams=d.teams.slice();
+  const C=room.ctl||{};for(const k in C)RM.last[k]=Object.assign({},C[k]);
+  RM.off=DB.on(RP(),hostSync);
+  startBattle()}
+if(SUBP)addEventListener('load',()=>setTimeout(subBoot,80));
+const DUALSETS=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
+async function startDual(){
+  if(RM.role!=='host'||!RM.code){toast('수업방이 연결돼야 동시 대전을 할 수 있어요');return}
+  for(let t=0;t<4;t++)if(!humansIn(t).length){toast(`${TEAMN[t]}에 학생이 없어요`);return}
+  setup.dualIdx=setup.dualIdx||0;const set=DUALSETS[setup.dualIdx%DUALSETS.length];setup.dualIdx++;
+  const dual={m0:{teams:set[0]},m1:{teams:set[1]}};
+  RM.dual=true;clearTimeout(hostPublish.t);
+  await DB.update(RP(),{'meta/state':'battle','meta/dual':dual,'meta/teamN':setup.teamN,'meta/units':S.units,matches:null,turn:null,result:null});
+  openDual(dual)}
+function openDual(dual){
+  const mock=/[?&]mock=1/.test(location.search)?'&mock=1':'';
+  const mk=(m,i)=>{const t=dual[m].teams;
+    return `<div class="dhalf" style="top:${46+i*337}px"><div class="dlab"><i>${i+1}경기</i><b style="color:${TEAMC[t[0]]}">${TEAMN[t[0]]}</b><span style="font-size:20px;color:#9fb4e8">VS</span><b style="color:${TEAMC[t[1]]}">${TEAMN[t[1]]}</b></div><div class="dbox"><iframe src="${location.pathname}?sub=1&room=${RM.code}&m=${m}${mock}"></iframe></div><div class="dnote">${i===0?'각 경기는 저절로 진행돼요.<br>문제·조준·발사는 학생 태블릿에서!':'화면 속 버튼을 직접 눌러<br>경기를 도와줄 수도 있어요.'}</div></div>`};
+  $('dual').innerHTML=`<div class="dtop"><span>⚔️ 동시 대전 · 방 번호 <b>${RM.code}</b></span><button class="tlink" style="position:static;width:320px;height:40px" onclick="dualEnd()">두 경기 모두 끝 · 대기실로</button></div>`+mk('m0',0)+mk('m1',1);
+  show('dual')}
+async function dualEnd(){
+  const P=(RM.data&&RM.data.players)||{};
+  setup.humans.forEach(h=>{const q=h.pid&&P[h.pid];if(q&&q.pts!=null)SCORES[h.name]=q.pts});saveScores();
+  $('dual').innerHTML='';RM.dual=false;hostClearReady();
+  await DB.update(RP(),{'meta/state':'assigned','meta/dual':null,matches:null});
+  openReady()}
+(function(){
+  const _rmp=renderMatchPick;renderMatchPick=function(){_rmp();
+    if(setup.teamN===4&&RM.role==='host'&&RM.code){const row=document.getElementById('mpRow');
+      if(row)row.insertAdjacentHTML('afterend','<button id="mpDual" onclick="mpDual()">⚡ 4팀 동시 대전 — 두 경기를 위·아래로</button>')}};
+  window.mpDual=function(){mpClose();startDual()};
 })();
 
 </script>
