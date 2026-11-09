@@ -290,6 +290,7 @@ button{font-family:'Jua','Noto Sans KR',sans-serif;cursor:pointer;border:none;ou
 #pwRow button{font-family:inherit;font-size:22px;padding:10px 26px;border:0;border-radius:12px;cursor:pointer}
 #pwOk{background:#1b5fc4;color:#fff}
 #pwNo{background:#e7e9ef;color:#444}
+.roomBadge.bad{background:#7a1420;border-color:#ff9d9d;cursor:pointer;font-size:26px}
 
 /* v10 두 팀 대결 선택 */
 #mpWrap{position:absolute;inset:0;z-index:78;background:rgba(8,20,40,.6);display:none;align-items:center;justify-content:center}
@@ -2553,12 +2554,15 @@ function renderRemoteResult(){const v=RM.data,r=v.result||{},me=setup.humans[tcI
   const _openAssign=openAssign;openAssign=function(){_openAssign();if(RM.role==='host'){hostMerge();renderAssign();hostState('lobby')}};
   const _openReady=openReady;openReady=function(){_openReady();if(RM.role==='host')hostState('assigned')};
   // 방 번호 표시
-  const _ra=renderAssign;renderAssign=function(){_ra();if(RM.role==='host'){
-    $('assignMk').insertAdjacentHTML('beforeend',`<div class="roomBadge" style="${P(1170,232,330,52)}">방 번호 <b>${RM.code}</b></div>`);
-    const sub=[...$('assignMk').querySelectorAll('.mtx')].find(e=>e.style.top==='233px');if(sub){sub.textContent=`학생은 각자 기기에서 [방 참가] → 방 번호 ${RM.code} 입력  ·  `+(aiTeam()>=0?'홀수면 AI 1대가 함께해요':'짝수 인원 · AI 없이 경기해요');sub.style.left='800px';sub.classList.add('fit');sub.style.width='1300px';sub.style.overflow='hidden'}
+  const _ra=renderAssign;renderAssign=function(){_ra();
+    if(setup.mode==='versus'&&RM.role!=='host'&&!RM.code)
+      $('assignMk').insertAdjacentHTML('beforeend',`<button class="roomBadge bad" style="${P(1096,224,406,64)};font-size:30px" onclick="retryRoom()">⚠️ 수업방 연결 안 됨 · 다시 열기</button>`);
+    if(RM.role==='host'){
+    $('assignMk').insertAdjacentHTML('beforeend',`<div class="roomBadge" style="${P(1142,222,360,66)}font-size:32px">방 번호 <b style="font-size:46px">${RM.code}</b></div>`);
+    const sub=[...$('assignMk').querySelectorAll('.mtx')].find(e=>e.style.top==='233px');if(sub){sub.textContent=`학생은 각자 기기에서 [방 참가] → 방 번호 ${RM.code} 입력  ·  `+(aiTeam()>=0?'홀수면 AI 1대가 함께해요':'짝수 인원 · AI 없이 경기해요');sub.style.left='800px';sub.classList.add('fit');sub.style.width='1000px';sub.style.overflow='hidden'}
     fitText($('assignMk'));hostPublish()}};
   const _rr=renderReady;renderReady=function(){_rr();if(RM.role==='host'){
-    $('readyMk').insertAdjacentHTML('beforeend',`<div class="roomBadge" style="${P(1170,232,330,52)}">방 번호 <b>${RM.code}</b></div>`);hostPublish()}};
+    $('readyMk').insertAdjacentHTML('beforeend',`<div class="roomBadge" style="${P(1142,222,360,66)}font-size:32px">방 번호 <b style="font-size:46px">${RM.code}</b></div>`);hostPublish()}};
   // 수업방에서는 가짜 학생 자동 채우기 없음
   const _er=ensureRoster;ensureRoster=function(){if(RM.role==='host')return;_er()};
   const _cnt=cntStep;cntStep=function(d){if(RM.role==='host'&&d<0&&!setup.humans.some(h=>!h.pid)){toast('기기로 참가한 학생은 그 기기에서 나가기를 눌러요');return}
@@ -2652,7 +2656,13 @@ function mpGo(){if(mSel.size!==2)return;const pair=[...mSel].sort((a,b)=>a-b);
   if(pair.some(t=>!humansIn(t).length)){toast('\uD559\uC0DD\uC774 \uC5C6\uB294 \uD300\uC740 \uACBD\uAE30\uD560 \uC218 \uC5C6\uC5B4\uC694');return}
   setup.matchTeams=pair;setup.matchIdx=(setup.matchIdx||0)+1;const g=openMatchPick.go;openMatchPick.go=null;
   $('mpWrap').classList.remove('on');snd('good');if(g)g()}
-(function(){const _om=openMap;openMap=function(){
+async function retryRoom(){if(RM.role==='host')return;toast('수업방을 다시 여는 중…');if(await hostOpen()){renderAssign()}}
+(function(){
+  const _oa3=openAssign;openAssign=async function(){
+    if(setup.mode!=='practice'&&RM.role!=='client'&&!RM.code){await hostOpen()}
+    _oa3()};
+  const _ta=titleAnim;titleAnim=function(){_ta();$('tMenu').insertAdjacentHTML('beforeend','<div style="position:absolute;right:10px;bottom:6px;font-size:15px;color:rgba(255,255,255,.75);font-family:sans-serif;text-shadow:0 1px 2px #000">v10</div>')};
+  const _om=openMap;openMap=function(){
   if(setup.mode==='versus'&&setup.teamN>2){openMatchPick(()=>_om());return}
   setup.matchTeams=null;_om()};
 })();
