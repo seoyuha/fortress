@@ -269,6 +269,14 @@ button{font-family:'Jua','Noto Sans KR',sans-serif;cursor:pointer;border:none;ou
 #flashBan.on{opacity:1}#flashBan img{height:92px}
 #popWrap.on{display:block}
 #timerBox{top:176px!important;left:1112px!important}
+
+/* v8 수업방 */
+.jin{position:absolute;border:0;outline:0;background:transparent;font-family:'Jua','Noto Sans KR',sans-serif;text-align:center}
+.jin::placeholder{color:rgba(255,255,255,.55)}
+#jName::placeholder{color:rgba(20,33,63,.45)}
+.roomBadge{position:absolute;background:rgba(10,30,70,.78);border:3px solid #ffd84d;border-radius:14px;color:#fff;font-family:'Jua','Noto Sans KR',sans-serif;font-size:30px;display:flex;align-items:center;justify-content:center;gap:8px}
+.roomBadge b{color:#ffd84d;font-size:36px;letter-spacing:4px}
+#qwrap{z-index:45}
 </style>
 </head>
 <body>
@@ -323,7 +331,18 @@ button{font-family:'Jua','Noto Sans KR',sans-serif;cursor:pointer;border:none;ou
   <div id="itemPop" class="imgModal" style="z-index:24;cursor:default"><div class="mk" id="itemMk"></div></div>
   <div id="pauseWrap" class="imgModal" style="z-index:25;cursor:default"><div class="mk" id="pauseMk"></div></div>
 
-  <div id="qwrap"><div id="qbox">
+</div>
+
+<!-- ============ 결과 ============ -->
+<div class="screen bgscr" id="tres"><div class="mk" id="tresMk"></div></div>
+<div class="screen bgscr" id="ires"><div class="mk" id="iresMk"></div></div>
+<div id="unlockPop" class="imgModal" style="z-index:60"><div id="unlockBox" onclick="event.stopPropagation();closeUnlock()"><canvas id="unlockCv" width="300" height="192"></canvas><div id="unlockName"></div></div></div>
+<!-- ============ 교사 설정 ============ -->
+<div id="setScr" class="bgscr"><div class="mk" id="setMk"></div></div>
+<!-- ============ 수업방 참가(학생 기기) ============ -->
+<div class="screen bgscr" id="join"><div class="mk" id="joinMk"></div></div>
+<div class="screen bgscr" id="remote"><div class="mk" id="remoteMk"></div></div>
+  <div id="qwrap" style="z-index:45"><div id="qbox">
     <canvas id="qtankL" width="220" height="140"></canvas><canvas id="qtankR" width="220" height="140"></canvas>
     <span id="qwho">1모둠</span><img id="qtitleImg"><div id="qtag"></div><div id="qhint">문제를 맞히면 조준할 수 있어요 · 첫 시도 정답은 특수탄!</div>
     <div id="gift"><div id="giftIco"></div><div id="giftName"></div><div id="giftSub">눌러서 닫기</div></div>
@@ -334,14 +353,6 @@ button{font-family:'Jua','Noto Sans KR',sans-serif;cursor:pointer;border:none;ou
       <div style="text-align:center;display:flex;gap:14px;justify-content:center" id="ordBtns"></div></div>
     <div id="qfeed"></div>
   </div></div>
-</div>
-
-<!-- ============ 결과 ============ -->
-<div class="screen bgscr" id="tres"><div class="mk" id="tresMk"></div></div>
-<div class="screen bgscr" id="ires"><div class="mk" id="iresMk"></div></div>
-<div id="unlockPop" class="imgModal" style="z-index:60"><div id="unlockBox" onclick="event.stopPropagation();closeUnlock()"><canvas id="unlockCv" width="300" height="192"></canvas><div id="unlockName"></div></div></div>
-<!-- ============ 교사 설정 ============ -->
-<div id="setScr" class="bgscr"><div class="mk" id="setMk"></div></div>
 <div id="toast"></div>
 </div>
 
@@ -2249,5 +2260,290 @@ function rePick(){openReady()}
 
 </script>
 <script>titleAnim();</script>
+<script>
+/* =========================================================
+   v8 — Firebase 수업방 (선생님 = 큰 화면 / 학생 = 각자 기기)
+   ========================================================= */
+const FB_CFG={apiKey:"AIzaSyDdX9PZG5Vrwqj9srimvgge7B06-qFU_3w",authDomain:"uno26-25d0a.firebaseapp.com",
+  databaseURL:"https://uno26-25d0a-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"uno26-25d0a",
+  storageBucket:"uno26-25d0a.firebasestorage.app",messagingSenderId:"871006987422",appId:"1:871006987422:web:278025ccf9bbc3403b878f"};
+const FB_ROOT='fortress';
+const RM={role:null,code:null,pid:null,data:null,off:null,last:{},pubKey:'',turnKey:'',turnT:0,turnTimer:null,screen:null,qOpen:false};
+
+/* ---------- 저장소: Firebase 또는 테스트용(mock) ---------- */
+function loadJS(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+function mockDB(){const KEY='fmock_tree',bc=('BroadcastChannel' in window)?new BroadcastChannel('fmock'):null,ls=[];
+  const tree=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}};
+  const at=(t,p)=>p.split('/').filter(Boolean).reduce((o,k)=>o==null?null:o[k],t);
+  const put=(t,p,v)=>{const ks=p.split('/').filter(Boolean);let o=t;ks.slice(0,-1).forEach(k=>{if(typeof o[k]!=='object'||o[k]===null)o[k]={};o=o[k]});if(v===null||v===undefined)delete o[ks[ks.length-1]];else o[ks[ks.length-1]]=v};
+  const fire=()=>{const t=tree();ls.forEach(l=>{const v=at(t,l.p),j=JSON.stringify(v===undefined?null:v);if(j!==l.j){l.j=j;const c=JSON.parse(j);setTimeout(()=>l.cb(c),0)}})};
+  const save=t=>{localStorage.setItem(KEY,JSON.stringify(t));bc&&bc.postMessage(1);fire()};
+  bc&&(bc.onmessage=fire);
+  return{set:(p,v)=>{const t=tree();put(t,p,JSON.parse(JSON.stringify(v)));save(t);return Promise.resolve()},
+    update:(p,o)=>{const t=tree();for(const k in o)put(t,p+'/'+k,o[k]===undefined?null:JSON.parse(JSON.stringify(o[k])));save(t);return Promise.resolve()},
+    remove:p=>{const t=tree();put(t,p,null);save(t);return Promise.resolve()},
+    get:p=>Promise.resolve(at(tree(),p)??null),
+    on:(p,cb)=>{const l={p,cb,j:undefined};ls.push(l);setTimeout(fire,0);return()=>{const i=ls.indexOf(l);if(i>=0)ls.splice(i,1)}},
+    onDisc:()=>{}}}
+function fbDB(){const d=firebase.database(),r=p=>d.ref(FB_ROOT_PREFIX+p);
+  return{set:(p,v)=>r(p).set(v),update:(p,o)=>r(p).update(o),remove:p=>r(p).remove(),get:p=>r(p).once('value').then(s=>s.val()),
+    on:(p,cb)=>{const h=s=>cb(s.val());r(p).on('value',h);return()=>r(p).off('value',h)},
+    onDisc:(p,o)=>r(p).onDisconnect().update(o)}}
+const FB_ROOT_PREFIX='';
+let DB=null;
+async function netInit(){if(DB)return true;
+  if(/[?&]mock=1/.test(location.search)){DB=mockDB();return true}
+  try{await loadJS('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+    await loadJS('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js');
+    if(!firebase.apps.length)firebase.initializeApp(FB_CFG);DB=fbDB();return true}catch(e){console.warn('firebase 연결 실패',e);return false}}
+const RP=s=>`${FB_ROOT}/rooms/${RM.code}${s?'/'+s:''}`;
+function myPid(){const SS=/[?\&]mock=1/.test(location.search)?sessionStorage:localStorage;let p=null;try{p=SS.getItem('ef_pid')}catch(e){}if(!p){p='p'+Math.random().toString(36).slice(2,10);try{SS.setItem('ef_pid',p)}catch(e){}}return p}
+
+/* =========================================================
+   선생님(호스트)
+   ========================================================= */
+async function hostOpen(){if(RM.role==='host'&&RM.code)return true;
+  toast('수업방을 여는 중이에요…');
+  if(!await netInit()){toast('인터넷에 연결할 수 없어 한 화면 모드로 진행해요');return false}
+  let code;for(let i=0;i<20;i++){code=String(1000+Math.floor(Math.random()*9000));const ex=await DB.get(`${FB_ROOT}/rooms/${code}/meta`);if(!ex)break}
+  RM.role='host';RM.code=code;RM.last={};
+  setup.humans=setup.humans.filter(h=>!h.pid);
+  await DB.set(RP(),{meta:{state:'lobby',teamN:setup.teamN,units:S.units,created:Date.now(),aiTank:setup.aiTank||null}});
+  RM.off=DB.on(RP(),hostSync);toast(`수업방 ${code}번을 열었어요`);return true}
+function hostMerge(){const P=(RM.data&&RM.data.players)||{};if(setup.mode!=='versus')return false;let ch=false;
+  const before=JSON.stringify(setup.humans.map(h=>[h.pid,h.name,h.tank,h.ready,h.team]));
+  setup.humans=setup.humans.filter(h=>!h.pid||P[h.pid]);
+  for(const pid in P){const q=P[pid];if(!q||!q.name)continue;let h=setup.humans.find(x=>x.pid===pid);
+    if(!h){const hum=[...Array(setup.teamN).keys()].map(t=>humansIn(t).length);let t=0;for(let k=0;k<setup.teamN;k++)if(hum[k]<hum[t])t=k;
+      if(setup.humans.length>=MAXS){continue}
+      h={pid,name:q.name,tank:q.tank||'rock',ready:false,team:t};setup.humans.push(h);snd('tick')}
+    let nm=String(q.name).slice(0,8);if(setup.humans.some(x=>x!==h&&x.name===nm)){nm=nm.slice(0,6)+' '+(setup.humans.indexOf(h)+1);DB.update(RP('players/'+pid),{name:nm})}
+    h.name=nm;h.tank=TK(q.tank)?q.tank:h.tank;h.ready=!!q.ready}
+  return before!==JSON.stringify(setup.humans.map(h=>[h.pid,h.name,h.tank,h.ready,h.team]))}
+function hostSync(v){if(RM.role!=='host')return;RM.data=v||{};
+  const changed=hostMerge();
+  if(changed){if($('assign').classList.contains('on'))renderAssign();else if($('ready').classList.contains('on'))renderReady()}
+  hostPublish();
+  if(game&&$('battle').classList.contains('on'))hostCtl()}
+function hostState(st){if(RM.role!=='host')return;DB.update(RP('meta'),{state:st,teamN:setup.teamN,units:S.units,aiTank:setup.aiTank||null});if(st==='lobby'||st==='assigned')hostPublish(true)}
+function hostPublish(force){if(RM.role!=='host'||!RM.data)return;clearTimeout(hostPublish.t);
+  hostPublish.t=setTimeout(()=>{const P=(RM.data&&RM.data.players)||{},up={};
+    setup.humans.forEach(h=>{if(h.pid&&P[h.pid]){const q=P[h.pid];const want={team:h.team,pts:pts(h.name)};
+      if(q.team!==want.team)up[`players/${h.pid}/team`]=want.team;if(q.pts!==want.pts)up[`players/${h.pid}/pts`]=want.pts;
+      if(!!q.ready!==!!h.ready&&h.readySet){up[`players/${h.pid}/ready`]=!!h.ready;delete h.readySet}}});
+    const m=RM.data.meta||{};if(m.teamN!==setup.teamN)up['meta/teamN']=setup.teamN;
+    if((m.aiTank||null)!==(setup.aiTank||null))up['meta/aiTank']=setup.aiTank||null;
+    if(Object.keys(up).length)DB.update(RP(),up)},force?0:120)}
+/* 배정이 바뀌면 다시 준비하도록 */
+function hostClearReady(){setup.humans.forEach(h=>{if(h.pid&&h.ready){h.ready=false;h.readySet=true}})}
+
+/* ---------- 전투 중: 학생 기기 조작 받기 ---------- */
+function hostCtl(){const cp=cur();const C=(RM.data&&RM.data.ctl)||{};
+  if(game.remoteSolving&&game.phase==='ready')$('solveBtn').style.display='none';
+  for(const pid in C){const c=C[pid]||{},L=RM.last[pid];
+    if(!L){RM.last[pid]=Object.assign({},c);continue}
+    const mine=cp&&cp.pid===pid&&cp.alive&&!cp.ai;
+    const nw=k=>(c[k]||0)>(L[k]||0);
+    if(mine){
+      if(nw('solveSeq')&&game.phase==='ready'){game.remoteSolving=true;$('solveBtn').style.display='none';tip(`${cp.name}이(가) 자기 기기에서 문제를 풀고 있어요.`)}
+      if(nw('ansSeq')&&game.phase==='ready'&&c.ans)hostAnswer(cp,c.ans);
+      if(game.phase==='aim'){
+        game.hold=c.hold||null;
+        if(nw('powSeq'))cp.pow=Math.max(5,Math.min(100,+c.pow||cp.pow));
+        if(nw('shotSeq'))pickShot(!!c.shot);
+        if(nw('itemSeq')&&c.item)useItem(c.item);
+        if(nw('fireSeq')){game.hold=null;humanFire()}
+        updateHUD()}}
+    RM.last[pid]=Object.assign({},c)}}
+function hostAnswer(p,a){const first=a.result==='first';let gain=first?10:5;
+  if(a.key&&p.rewarded.has(a.key))gain=0;else if(a.key)p.rewarded.add(a.key);
+  first?p.st.first++:p.st.retry++;(a.wrongs||[]).forEach(w=>p.st.wrongs.push(w));addPoints(p,gain);
+  if(first&&S.items!==false&&p.items.length<3)p.items.push(pick(Object.keys(ITEMS)));
+  game.remoteSolving=false;$('solveBtn').style.display='none';snd('good');beginAim(first?'first':'retry')}
+function hostTurnPublish(){if(RM.role!=='host'||!game||!DB)return;const cp=cur();if(!cp)return;
+  const o={pid:cp.pid||null,name:cp.name,ai:!!cp.ai,team:cp.team,phase:game.phase,ang:Math.round(cp.ang),pow:Math.round(cp.pow),
+    fuel:Math.max(0,Math.round(cp.fuel/TK(cp.tankId).fuel*100)),canSpecial:!!game.canSpecial,useSpecial:!!game.useSpecial,
+    items:cp.items||[],itemUsed:!!game.itemUsed,round:game.round,maxRounds:game.maxRounds,timer:S.timer?game.timer:0,map:game.mapName,
+    hp:Object.fromEntries(game.players.filter(p=>p.pid).map(p=>[p.pid,[Math.max(0,Math.round(p.hp)),p.alive?1:0]]))};
+  const j=JSON.stringify(o);if(j===RM.turnKey)return;const now=performance.now();
+  if(now-RM.turnT<110){clearTimeout(RM.turnTimer);RM.turnTimer=setTimeout(hostTurnPublish,120);return}
+  RM.turnKey=j;RM.turnT=now;DB.set(RP('turn'),o)}
+function hostResult(wt){if(RM.role!=='host')return;
+  const r={winner:wt,teamN:game.nTeams,players:Object.fromEntries(game.players.filter(p=>p.pid).map(p=>[p.pid,{team:p.team,first:p.st.first,retry:p.st.retry,earned:p.st.earned+((p.st.first+p.st.retry)>0?20:0),pts:pts(p.name)}]))};
+  const up={result:r,'meta/state':'result'};game.players.forEach(p=>{if(p.pid)up[`players/${p.pid}/pts`]=pts(p.name)});
+  DB.update(RP(),up)}
+
+/* =========================================================
+   학생(참가자)
+   ========================================================= */
+function openJoin(){const m=/[?&]room=(\d{4})/.exec(location.search);let nm='';try{nm=localStorage.getItem('ef_myname')||''}catch(e){}
+  let h=`<div class="mtx tcban" style="left:842px;top:214px;font-size:62px;color:#fff;-webkit-text-stroke:0;text-shadow:0 3px 0 #000">수업방 참가</div>`;
+  h+=BTN('exit',"show('title')",1328,20,240,70);
+  h+=`<div class="mtx" style="left:836px;top:362px;font-size:34px;color:#14325f">선생님 화면의 방 번호와 내 이름을 넣어요</div>`;
+  h+=SPR('pill_cnt',470,410,732,140)+`<input id="jCode" inputmode="numeric" maxlength="4" placeholder="방 번호 4자리" value="${m?m[1]:''}" class="jin" style="${P(560,432,552,96)}font-size:58px;color:#fff">`;
+  h+=SPR('bar_lb',400,580,872,112)+`<input id="jName" maxlength="8" placeholder="내 이름" value="${esc(nm)}" class="jin" style="${P(470,594,732,84)}font-size:50px;color:#14213f">`;
+  h+=`<button class="sbtn" style="${P(596,736,480,104)}--n:url(${iURI('tab_on')});--p:url(${iURI('tab_on')})" onclick="doJoin()"></button><div class="mtx" style="left:836px;top:790px;font-size:48px;color:#fff;text-shadow:0 3px 0 #0b2a6a">참가하기</div>`;
+  $('join').style.backgroundImage=`url(${iURI('bg_tc2')})`;$('joinMk').innerHTML=h;show('join')}
+async function doJoin(){const code=($('jCode').value||'').trim(),name=($('jName').value||'').trim().slice(0,8);
+  if(!/^\d{4}$/.test(code)){toast('방 번호 4자리를 넣어 주세요');return}
+  if(!name){toast('이름을 넣어 주세요');return}
+  if(name==='AI 탱크'){toast('다른 이름을 지어 주세요');return}
+  if(!await netInit()){toast('인터넷에 연결할 수 없어요');return}
+  RM.code=code;const meta=await DB.get(RP('meta'));
+  if(!meta||meta.state==='closed'){toast('그 번호의 수업방이 없어요. 번호를 확인해 주세요');RM.code=null;return}
+  const pid=myPid(),P=(await DB.get(RP('players')))||{};
+  if(!P[pid]&&Object.keys(P).length>=MAXS){toast('수업방이 꽉 찼어요 (최대 10명)');RM.code=null;return}
+  if(Object.entries(P).some(([k,q])=>k!==pid&&q&&q.name===name)){toast('같은 이름이 이미 있어요. 다른 이름을 지어 주세요');RM.code=null;return}
+  try{localStorage.setItem('ef_myname',name)}catch(e){}
+  RM.role='client';RM.pid=pid;RM.screen=null;
+  const old=P[pid]||{};await DB.update(RP('players/'+pid),{name,tank:old.tank||'rock',ready:false,online:true,joined:Date.now()});
+  DB.onDisc(RP('players/'+pid),{online:false});
+  if(RM.off)RM.off();RM.off=DB.on(RP(),clientSync);snd('good')}
+function clientLeave(){if(RM.role!=='client')return;DB.remove(RP('players/'+RM.pid));DB.remove(RP('ctl/'+RM.pid));if(RM.off)RM.off();RM.off=null;RM.role=null;RM.code=null;show('title')}
+function clientMirror(v){const P=v.players||{},m=v.meta||{};setup.mode='versus';setup.teamN=m.teamN||2;setup.aiTank=m.aiTank||'rock';
+  setup.humans=Object.entries(P).filter(([k,q])=>q&&q.name).sort((a,b)=>(a[1].joined||0)-(b[1].joined||0)).map(([pid,q])=>({pid,name:q.name,tank:q.tank||'rock',ready:!!q.ready,team:q.team||0}));
+  const me=P[RM.pid];if(me){SCORES[me.name]=me.pts||0}
+  tcIdx=setup.humans.findIndex(h=>h.pid===RM.pid);RM.assigned=m.state!=='lobby'}
+function clientSync(v){if(RM.role!=='client')return;RM.data=v;
+  if(!v||!v.meta||v.meta.state==='closed'){toast('수업방이 닫혔어요');if(RM.off)RM.off();RM.role=null;show('title');return}
+  if(!v.players||!v.players[RM.pid]){toast('선생님이 수업방에서 내보냈어요');if(RM.off)RM.off();RM.role=null;show('title');return}
+  const vk=JSON.stringify([v.meta,v.players,v.turn||0,v.result||0]);
+  if(vk===RM.viewKey)return; RM.viewKey=vk;
+  clientMirror(v);const st=v.meta.state;
+  const t=v.turn||{};if(RM.waitAns&&(t.phase!=='ready'||t.pid!==RM.pid))RM.waitAns=false;
+  if(st==='battle'){if(!game||!game.cl)game={cl:1,units:v.meta.units||[10,11,12],players:[],phase:'remote',turn:0};
+    game.units=v.meta.units||game.units;if(!RM.qOpen)renderRemote()}
+  else if(st==='result'){RM.qOpen=false;RM.waitAns=false;$('qwrap').classList.remove('on');renderRemoteResult()}
+  else{RM.qOpen=false;RM.waitAns=false;$('qwrap').classList.remove('on');
+    const busy=['list','detail'].some(id=>$(id).classList.contains('on'));if(!busy)openTconf(tcIdx)}}
+function ctl(o){if(RM.role!=='client')return;DB.update(RP('ctl/'+RM.pid),o)}
+let ctlSeq=0;const nseq=()=>Date.now()*10+(ctlSeq=(ctlSeq+1)%10);
+
+/* ---------- 학생 기기: 전투 리모컨 ---------- */
+function renderRemote(){const v=RM.data,t=v.turn||{},me=setup.humans[tcIdx];if(!me)return;
+  const mine=t.pid===RM.pid,hp=(t.hp&&t.hp[RM.pid])||[100,1],ph=t.phase;
+  $('remote').style.backgroundImage=`url(${iURI('bg_tc2')})`;
+  let h=BTN('exit','clientLeave()',1328,20,240,70);
+  h+=`<div class="mtx tcban" style="left:842px;top:214px;font-size:62px;color:${mine?'#ffd84d':'#fff'};-webkit-text-stroke:0;text-shadow:0 3px 0 #000">${mine?'내 차례!':esc(t.name||'')+(t.name?' 차례':'경기 준비 중')}</div>`;
+  h+=`<div class="mtx" style="left:836px;top:290px;font-size:32px;color:${TEAMC[me.team]}">${esc(me.name)} · ${TEAMN[me.team]}</div>`;
+  h+=SPR('tc_big',243,318,1185,240)+`<canvas class="tck" width="900" height="420" style="${P(330,330,500,222)}"></canvas>`;
+  h+=`<div class="mtx" style="left:1120px;top:390px;font-size:34px;color:#fff">${hp[1]?`체력 ${hp[0]} / 100`:'격파됐어요'}</div>`;
+  h+=`<div style="position:absolute;${P(930,425,380,24)}background:rgba(0,0,0,.5);border-radius:12px;overflow:hidden"><i style="display:block;height:100%;width:${hp[0]}%;background:${TEAMC[me.team]}"></i></div>`;
+  h+=`<div class="mtx" style="left:1120px;top:500px;font-size:26px;color:#cfe6ff">${esc(t.map||'')} · ${t.round?`${Math.min(t.round,t.maxRounds)}/${t.maxRounds} 라운드`:''}</div>`;
+  if(mine&&ph==='ready'&&RM.waitAns)h+=`<div class="mtx" style="left:836px;top:680px;font-size:40px;color:#14325f">정답! 발사 준비 중…</div>`;
+  else if(mine&&ph==='ready'){h+=`<button class="sbtn" style="${P(586,600,500,156)}--n:url(${iURI('bt_solve_n')});--p:url(${iURI('bt_solve_p')})" onclick="remoteSolve()"></button>`;
+    h+=`<div class="mtx" style="left:836px;top:800px;font-size:30px;color:#3a3a46">문제를 맞히면 이 기기로 조준하고 발사해요</div>`}
+  else if(mine&&ph==='aim')h+=remoteConsole(t);
+  else if(mine)h+=`<div class="mtx" style="left:836px;top:680px;font-size:44px;color:#14325f">발사! 큰 화면을 보세요</div>`;
+  else{h+=t.ai?SPR('ai_think',520,620,632,106):`<div class="mtx" style="left:836px;top:660px;font-size:40px;color:#14325f">친구 차례예요. 큰 화면을 보세요!</div>`;
+    if(!hp[1])h+=`<div class="mtx" style="left:836px;top:780px;font-size:28px;color:#6a6a76">격파됐지만 팀을 응원해요!</div>`}
+  $('remoteMk').innerHTML=h;
+  previewTank($('remoteMk').querySelector('.tck'),me.tank,hp[1]?(hp[0]<40?'hurt':'happy'):'hurt');
+  if(mine&&ph==='aim')bindRemote();
+  if(!$('remote').classList.contains('on'))show('remote')}
+function remoteConsole(t){let h=IM('hud_con',0,712,1672,229);
+  h+=`<button class="hz2 rh" data-a="moveL" style="${P(68,815,118,92)}"></button><button class="hz2 rh" data-a="moveR" style="${P(215,815,120,92)}"></button>`;
+  h+=`<div style="position:absolute;${P(84,908,236,9)}background:rgba(0,0,0,.55);border-radius:5px;overflow:hidden"><i style="display:block;height:100%;width:${t.fuel}%;background:#7cf27c"></i></div>`;
+  h+=`<button class="hz2 rh" data-a="angDn" style="${P(405,815,82,82)}"></button><button class="hz2 rh" data-a="angUp" style="${P(650,815,82,82)}"></button>`;
+  h+=`<div class="mtx" style="left:572px;top:857px;font-size:56px;color:#fff">${t.ang}°</div>`;
+  h+=`<div id="rPow" style="position:absolute;${P(800,818,312,68)}cursor:pointer"><img src="${iURI('pow_fill')}" style="position:absolute;left:5px;top:6px;height:56px;width:${303*t.pow/100}px"></div>`;
+  h+=`<div class="mtx" style="left:1178px;top:857px;font-size:50px;color:#fff">${t.pow}</div>`;
+  const sb=(k,on,x,w,fn,dis)=>`<button class="sbtn" ${dis?'disabled':''} style="${P(x,742,w,62)}--n:url(${iURI(k+(on?'_p':'_n'))});--p:url(${iURI(k+'_p')});--d:url(${iURI(k+'_d')})" onclick="${fn}"></button>`;
+  h+=sb('bt_norm2',!t.useSpecial,1278,174,'remoteShot(false)')+sb('bt_spec2',t.useSpecial,1456,172,'remoteShot(true)',!t.canSpecial);
+  h+=`<button class="sbtn" style="${P(1283,810,344,99)}--n:url(${iURI('bt_fire2_n')});--p:url(${iURI('bt_fire2_p')})" onclick="remoteFire()"></button>`;
+  if(!t.itemUsed&&t.items&&t.items.length){h+=`<div class="mtx" style="left:300px;top:610px;font-size:28px;color:#14325f;transform:translate(0,-50%);text-align:left">아이템 (한 번에 1개)</div>`;
+    t.items.forEach((k,i)=>{const x=570+i*190;h+=`<button class="sbtn ritem" style="${P(x,560,170,144)}--n:url(${iURI('it_tile')});--p:url(${iURI('it_tile')})" onclick="remoteItem('${k}')"><img src="${iURI('it_'+k)}" style="position:absolute;left:38px;top:12px;width:94px;height:84px;object-fit:contain"><span style="position:absolute;left:0;right:0;top:108px;font-family:'Jua','Noto Sans KR',sans-serif;font-size:22px;color:#fff;text-shadow:0 2px 0 #000">${ITEMS[k].n}</span></button>`})}
+  else h+=`<div class="mtx" style="left:836px;top:640px;font-size:34px;color:#14325f">각도와 힘을 정하고 발사해요!</div>`;
+  return h}
+function bindRemote(){document.querySelectorAll('#remoteMk .rh').forEach(b=>{const a=b.dataset.a;
+    const st=e=>{e.preventDefault();ctl({hold:a})},sp=()=>ctl({hold:null});
+    b.addEventListener('pointerdown',st);b.addEventListener('pointerup',sp);b.addEventListener('pointerleave',sp);b.addEventListener('pointercancel',sp)});
+  const pw=$('rPow');if(!pw)return;let drag=false,last=0;
+  const setP=e=>{const r=pw.getBoundingClientRect(),v=Math.round(Math.max(5,Math.min(100,(e.clientX-r.left-8)/(r.width-16)*100)));
+    const img=pw.querySelector('img');img.style.width=(303*v/100)+'px';const now=performance.now();if(now-last>90){last=now;ctl({pow:v,powSeq:nseq()})}else{clearTimeout(setP.t);setP.t=setTimeout(()=>ctl({pow:v,powSeq:nseq()}),100)}};
+  pw.addEventListener('pointerdown',e=>{drag=true;pw.setPointerCapture(e.pointerId);setP(e)});pw.addEventListener('pointermove',e=>{if(drag)setP(e)});
+  pw.addEventListener('pointerup',()=>drag=false);pw.addEventListener('pointercancel',()=>drag=false)}
+function remoteShot(sp){ctl({shot:sp,shotSeq:nseq()})}
+function remoteFire(){ctl({hold:null,fireSeq:nseq()});snd('fire')}
+function remoteItem(k){ctl({item:k,itemSeq:nseq()});snd('tick')}
+function remoteSolve(){const me=setup.humans[tcIdx];ctl({solveSeq:nseq()});RM.qOpen=true;
+  game.phase='question';
+  const p={name:me.name,tankId:me.tank,team:me.team,ai:false,alive:true,items:['x','x','x'],rewarded:new Set(RM.keys||[]),st:{first:0,retry:0,wrongs:[],earned:0,dmg:0}};
+  askQuestion(p)}
+function renderRemoteResult(){const v=RM.data,r=v.result||{},me=setup.humans[tcIdx];if(!me)return;const mr=(r.players||{})[RM.pid]||{};
+  $('remote').style.backgroundImage=`url(${iURI('bg_tc2')})`;
+  const win=r.winner===me.team,draw=r.winner===-1;
+  let h=BTN('exit','clientLeave()',1328,20,240,70);
+  h+=`<div class="mtx tcban" style="left:842px;top:214px;font-size:62px;color:${draw?'#fff':(win?'#ffd84d':'#cfe6ff')};-webkit-text-stroke:0;text-shadow:0 3px 0 #000">${draw?'무승부!':(win?'우리 팀 승리!':`${TEAMN[r.winner]||''} 승리`)}</div>`;
+  h+=`<div class="mtx" style="left:836px;top:290px;font-size:32px;color:${TEAMC[me.team]}">${esc(me.name)} · ${TEAMN[me.team]}</div>`;
+  h+=SPR(draw?'rsb_draw':(win?'rsb_win':'rsb_lose'),436,330,800,150);
+  h+=SPR('stat_learn',436,500,400,90)+`<div class="mtx" style="left:790px;top:545px;font-size:40px;color:#fff;transform:translate(-100%,-50%)">+${mr.earned||0}</div>`;
+  h+=SPR('stat_ok',846,500,400,90)+`<div class="mtx" style="left:1200px;top:545px;font-size:40px;color:#fff;transform:translate(-100%,-50%)">${(mr.first||0)+(mr.retry||0)}</div>`;
+  h+=SPR('stat_total',640,610,400,90)+`<div class="mtx" style="left:994px;top:655px;font-size:40px;color:#fff;transform:translate(-100%,-50%)">${mr.pts||0}</div>`;
+  h+=`<div class="mtx" style="left:836px;top:790px;font-size:32px;color:#3a3a46">선생님이 다음 경기를 준비하고 있어요</div>`;
+  $('remoteMk').innerHTML=h;if(!$('remote').classList.contains('on'))show('remote')}
+
+/* =========================================================
+   기존 흐름에 연결
+   ========================================================= */
+(function(){
+  // 제목 화면: 방 참가 버튼
+  const _title=titleAnim;titleAnim=function(){_title();
+    $('tMenu').insertAdjacentHTML('beforeend',`<div style="position:absolute;left:22px;top:16px"><button class="pbtn" style="--n:url(${iURI('tab_on')});--p:url(${iURI('tab_on')});width:208px;height:52px;position:relative" onclick="openJoin()"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Jua','Noto Sans KR',sans-serif;font-size:24px;color:#fff;text-shadow:0 2px 0 #0b2a6a">방 참가 (학생)</span></button></div>`)};
+  // 모둠 대전 → 수업방 열기
+  const _startRoom=startRoom;startRoom=async function(mode){
+    if(mode==='versus'&&RM.role!=='client'){await hostOpen()}
+    _startRoom(mode);if(mode==='versus')hostMerge()};
+  const _openAssign=openAssign;openAssign=function(){_openAssign();if(RM.role==='host'){hostMerge();renderAssign();hostState('lobby')}};
+  const _openReady=openReady;openReady=function(){_openReady();if(RM.role==='host')hostState('assigned')};
+  // 방 번호 표시
+  const _ra=renderAssign;renderAssign=function(){_ra();if(RM.role==='host'){
+    $('assignMk').insertAdjacentHTML('beforeend',`<div class="roomBadge" style="${P(1170,232,330,52)}">방 번호 <b>${RM.code}</b></div>`);
+    const sub=[...$('assignMk').querySelectorAll('.mtx')].find(e=>e.style.top==='233px');if(sub){sub.textContent=`학생은 각자 기기에서 [방 참가] → 방 번호 ${RM.code} 입력  ·  `+(aiTeam()>=0?'홀수면 AI 1대가 함께해요':'짝수 인원 · AI 없이 경기해요');sub.style.left='800px';sub.classList.add('fit');sub.style.width='1300px';sub.style.overflow='hidden'}
+    fitText($('assignMk'));hostPublish()}};
+  const _rr=renderReady;renderReady=function(){_rr();if(RM.role==='host'){
+    $('readyMk').insertAdjacentHTML('beforeend',`<div class="roomBadge" style="${P(1170,232,330,52)}">방 번호 <b>${RM.code}</b></div>`);hostPublish()}};
+  // 수업방에서는 가짜 학생 자동 채우기 없음
+  const _er=ensureRoster;ensureRoster=function(){if(RM.role==='host')return;_er()};
+  const _cnt=cntStep;cntStep=function(d){if(RM.role==='host'&&d<0&&!setup.humans.some(h=>!h.pid)){toast('기기로 참가한 학생은 그 기기에서 나가기를 눌러요');return}
+    _cnt(d);if(RM.role==='host'){hostClearReady();hostPublish()}};
+  // 배정 변경 시 준비 해제
+  ['autoAssign','setTeamN','rowTap'].forEach(fn=>{const f=window[fn];window[fn]=function(...a){const r=f.apply(this,a);if(RM.role==='host'){hostClearReady();hostPublish()}return r}});
+  // 팀 확인 화면 (학생 기기)
+  const _rt=renderTconf;renderTconf=function(){_rt();if(RM.role!=='client')return;
+    if(!RM.assigned){const b=$('tconfMk').querySelector('.tcban');if(b){b.textContent='선생님이 팀을 정하는 중';b.style.color='#fff';b.style.fontSize='54px'}
+      [...$('tconfMk').querySelectorAll('.sbtn')].forEach(e=>{if(e.getAttribute('onclick')==='tcReady()'){e.disabled=true;e.setAttribute('onclick','')}})}
+    const ex=[...$('tconfMk').querySelectorAll('.sbtn')].find(e=>e.getAttribute('onclick')==='tcExit()');if(ex)ex.setAttribute('onclick','clientLeave()')};
+  const _tcReady=tcReady;tcReady=function(){if(RM.role==='client'){if(!RM.assigned)return;DB.update(RP('players/'+RM.pid),{ready:true});snd('good');return}
+    const h=setup.humans[tcIdx];if(RM.role==='host'&&h&&h.pid){h.ready=true;h.readySet=true;hostPublish(true);snd('good');renderTconf();clearTimeout(tcTimer);tcTimer=setTimeout(()=>{if($('tconf').classList.contains('on'))openReady()},1200);return}
+    _tcReady()};
+  const _tcCancel=tcCancel;tcCancel=function(){if(RM.role==='client'){DB.update(RP('players/'+RM.pid),{ready:false});return}
+    const h=setup.humans[tcIdx];if(RM.role==='host'&&h&&h.pid){h.ready=false;h.readySet=true;hostPublish(true)}_tcCancel()};
+  const _tcRename=tcRename;tcRename=function(v){if(RM.role==='client'){v=v.trim().slice(0,8);if(!v||v==='AI 탱크'||setup.humans.some(h=>h.pid!==RM.pid&&h.name===v)){toast('이미 있는 이름이에요');renderTconf();return}
+      try{localStorage.setItem('ef_myname',v)}catch(e){}DB.update(RP('players/'+RM.pid),{name:v});return}
+    const h=setup.humans[tcIdx];if(RM.role==='host'&&h&&h.pid){toast('학생 기기에서 이름을 바꿔요');renderTconf();return}_tcRename(v)};
+  const _openTconf=openTconf;openTconf=function(i){_openTconf(i);if(RM.role==='client'){const h=setup.humans[i];if(h){const q=(RM.data.players||{})[RM.pid]||{};if(q.tank!==h.tank)DB.update(RP('players/'+RM.pid),{tank:h.tank})}}};
+  // 전투
+  const _sb=startBattle;startBattle=function(){_sb();if(RM.role==='host'){
+      const ros=rosterFull();game.players.forEach((p,i)=>{p.pid=ros[i]&&ros[i].pid||null});
+      RM.last={};const C=(RM.data&&RM.data.ctl)||{};for(const k in C)RM.last[k]=Object.assign({},C[k]);
+      RM.turnKey='';DB.update(RP(),{'meta/state':'battle','meta/teamN':setup.teamN,'meta/units':S.units,'meta/aiTank':setup.aiTank||null,result:null})}};
+  const _ts=turnStart;turnStart=function(){_ts();const p=cur();if(RM.role==='host'&&p&&p.pid&&!p.ai){
+      later(()=>{if(game&&game.phase==='ready'&&cur()===p)tip(`${p.name} 차례! 태블릿에서 문제를 풀어요.`)},700)}};
+  const _sr=showResult;showResult=function(){const was=game&&game.shown;_sr();if(RM.role==='host'&&game&&!was){
+      const tids=[...new Set(game.players.map(p=>p.team))];const sc=t=>{const m=game.players.filter(p=>p.team===t);return m.filter(p=>p.alive).length*1000+m.reduce((s,p)=>s+Math.max(0,p.hp),0)/m.length};
+      const s=tids.map(t=>[t,sc(t)]).sort((a,b)=>b[1]-a[1]);hostResult(s.length>1&&Math.abs(s[0][1]-s[1][1])<.01?-1:s[0][0])}};
+  const _show=show;show=function(id){_show(id);if(RM.role==='host'&&id==='title'&&RM.data&&RM.data.meta&&['battle','result'].includes(RM.data.meta.state))hostState('lobby')};
+  // 학생 기기: 문제를 맞힌 뒤 → 선생님 화면으로 결과 보내기
+  const _closeQ=closeQ;closeQ=function(r){if(RM.role==='client'){$('qwrap').classList.remove('on');RM.qOpen=false;
+      RM.keys=RM.keys||[];if(Q&&Q.key&&!RM.keys.includes(Q.key))RM.keys.push(Q.key);
+      ctl({ans:{result:r,key:Q?Q.key:null,wrongs:qPlayer?qPlayer.st.wrongs.slice(0,4):[]},ansSeq:nseq()});
+      RM.waitAns=true;game.phase='remote';renderRemote();return}
+    _closeQ(r)};
+  // 매 프레임 차례 정보 보내기
+  const _upd=update;update=function(){_upd();if(RM.role==='host')hostTurnPublish()};
+})();
+
+</script>
 </body>
 </html>
