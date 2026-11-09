@@ -2385,7 +2385,7 @@ function hostTurnPublish(){if(RM.role!=='host'||!game||!DB)return;const cp=cur()
   if(now-RM.turnT<110){clearTimeout(RM.turnTimer);RM.turnTimer=setTimeout(hostTurnPublish,120);return}
   RM.turnKey=j;RM.turnT=now;DB.set(RP('turn'),o)}
 function hostResult(wt){if(RM.role!=='host')return;
-  const r={winner:wt,teamN:game.nTeams,players:Object.fromEntries(game.players.filter(p=>p.pid).map(p=>[p.pid,{team:p.team,first:p.st.first,retry:p.st.retry,earned:p.st.earned+((p.st.first+p.st.retry)>0?20:0),pts:pts(p.name)}]))};
+  const r={winner:wt,teamN:game.nTeams,players:Object.fromEntries(game.players.filter(p=>p.pid).map(p=>[p.pid,{team:p.team,first:p.st.first,retry:p.st.retry,earned:p.st.earned,pts:pts(p.name)}]))};
   const up={result:r,'meta/state':'result'};game.players.forEach(p=>{if(p.pid)up[`players/${p.pid}/pts`]=pts(p.name)});
   DB.update(RP(),up)}
 
