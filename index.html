@@ -2305,11 +2305,14 @@ function myPid(){const SS=/[?\&]mock=1/.test(location.search)?sessionStorage:loc
 async function hostOpen(){if(RM.role==='host'&&RM.code)return true;
   toast('수업방을 여는 중이에요…');
   if(!await netInit()){toast('인터넷에 연결할 수 없어 한 화면 모드로 진행해요');return false}
-  let code;for(let i=0;i<20;i++){code=String(1000+Math.floor(Math.random()*9000));const ex=await DB.get(`${FB_ROOT}/rooms/${code}/meta`);if(!ex)break}
-  RM.role='host';RM.code=code;RM.last={};
-  setup.humans=setup.humans.filter(h=>!h.pid);
-  await DB.set(RP(),{meta:{state:'lobby',teamN:setup.teamN,units:S.units,created:Date.now(),aiTank:setup.aiTank||null}});
-  RM.off=DB.on(RP(),hostSync);toast(`수업방 ${code}번을 열었어요`);return true}
+  try{
+    let code;for(let i=0;i<20;i++){code=String(1000+Math.floor(Math.random()*9000));const ex=await DB.get(`${FB_ROOT}/rooms/${code}/meta`);if(!ex)break}
+    RM.role='host';RM.code=code;RM.last={};
+    setup.humans=setup.humans.filter(h=>!h.pid);
+    await DB.set(RP(),{meta:{state:'lobby',teamN:setup.teamN,units:S.units,created:Date.now(),aiTank:setup.aiTank||null}});
+    RM.off=DB.on(RP(),hostSync);toast(`수업방 ${code}번을 열었어요`);return true
+  }catch(e){console.warn('수업방 열기 실패',e);RM.role=null;RM.code=null;
+    toast(/permission/i.test(String(e&&e.message))?'서버 규칙에 fortress 허용이 필요해요 · 한 화면 모드로 진행해요':'수업방을 열 수 없어요 · 한 화면 모드로 진행해요');return false}}
 function hostMerge(){const P=(RM.data&&RM.data.players)||{};if(setup.mode!=='versus')return false;let ch=false;
   const before=JSON.stringify(setup.humans.map(h=>[h.pid,h.name,h.tank,h.ready,h.team]));
   setup.humans=setup.humans.filter(h=>!h.pid||P[h.pid]);
@@ -2389,7 +2392,7 @@ async function doJoin(){const code=($('jCode').value||'').trim(),name=($('jName'
   if(!name){toast('이름을 넣어 주세요');return}
   if(name==='AI 탱크'){toast('다른 이름을 지어 주세요');return}
   if(!await netInit()){toast('인터넷에 연결할 수 없어요');return}
-  RM.code=code;const meta=await DB.get(RP('meta'));
+  RM.code=code;let meta=null;try{meta=await DB.get(RP('meta'))}catch(e){toast('서버에 연결할 수 없어요. 선생님께 알려 주세요');RM.code=null;return}
   if(!meta||meta.state==='closed'){toast('그 번호의 수업방이 없어요. 번호를 확인해 주세요');RM.code=null;return}
   const pid=myPid(),P=(await DB.get(RP('players')))||{};
   if(!P[pid]&&Object.keys(P).length>=MAXS){toast('수업방이 꽉 찼어요 (최대 10명)');RM.code=null;return}
