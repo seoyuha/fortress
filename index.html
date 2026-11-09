@@ -2339,6 +2339,10 @@ function myPid(){const SS=/[?\&]mock=1/.test(location.search)?sessionStorage:loc
    선생님(호스트)
    ========================================================= */
 async function hostOpen(){if(RM.role==='host'&&RM.code)return true;
+  if(hostOpen.p)return hostOpen.p;
+  hostOpen.p=hostOpen2();const r=await hostOpen.p;hostOpen.p=null;return r}
+async function hostOpen2(){if(RM.role==='host'&&RM.code)return true;
+  if(RM.off){RM.off();RM.off=null}
   toast('수업방을 여는 중이에요…');
   if(!await netInit()){toast('인터넷에 연결할 수 없어 한 화면 모드로 진행해요');return false}
   try{
