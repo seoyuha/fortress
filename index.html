@@ -2544,8 +2544,9 @@ function renderRemoteResult(){const v=RM.data,r=v.result||{},me=setup.humans[tcI
       ctl({ans:{result:r,key:Q?Q.key:null,wrongs:qPlayer?qPlayer.st.wrongs.slice(0,4):[]},ansSeq:nseq()});
       RM.waitAns=true;game.phase='remote';renderRemote();return}
     _closeQ(r)};
-  // 매 프레임 차례 정보 보내기
+  // 매 프레임 차례 정보 보내기 (+ 화면이 가려져 있어도 1초마다 보험 전송)
   const _upd=update;update=function(){_upd();if(RM.role==='host')hostTurnPublish()};
+  setInterval(()=>{if(RM.role==='host'&&game&&$('battle').classList.contains('on'))hostTurnPublish()},900);
 })();
 
 </script>
